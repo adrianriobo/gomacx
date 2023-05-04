@@ -1,18 +1,21 @@
+//go:build darwin
+// +build darwin
+
 package main
 
 import (
 	"fmt"
-	"github.com/adrianriobo/gomacx/pkg/cocoa"
+
+	"github.com/adrianriobo/gomacx/pkg/api/appkit"
 )
 
-const (
-	mainPane                 string = "Podman Desktop"
-	checkEnableTelemetryName string = "Enable telemetry"
-	buttonName               string = "Go to Podman Desktop"
-)
+// const (
+// 	mainPane                 string = "Podman Desktop"
+// 	checkEnableTelemetryName string = "Enable telemetry"
+// 	buttonName               string = "Go to Podman Desktop"
+// )
 
 func main() {
-	a := cocoa.GetRunningApplication()
-	b := a.GetBundleID()
-	fmt.Println(b)
+	app := appkit.GetApp()
+	fmt.Println(app.BundleIdentifier())
 }
