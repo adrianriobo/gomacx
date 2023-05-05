@@ -8,10 +8,16 @@ package appkit
 //#include "nsrunningapplication.h"
 import "C"
 import (
+	"fmt"
+	"time"
 	"unsafe"
 
 	"github.com/adrianriobo/gomacx/pkg/api/axuielement"
 	"github.com/adrianriobo/gomacx/pkg/core"
+)
+
+var (
+	defaultDelay = 10 * time.Second
 )
 
 // https://developer.apple.com/documentation/appkit/nsrunningapplication?language=objc
@@ -22,12 +28,32 @@ type NSRunningApplication struct {
 	focusedWindow    *axuielement.AXUIElementRef
 }
 
+func ShowAllApplications() {
+	C.ShowAllApplications()
+}
+
 func GetApp() *NSRunningApplication {
 	app := NSRunningApplication{
 		ref: C.FrontmostApplication()}
 	app.createAX()
-	app.loadFocusedWindow()
+	if err := app.loadFocusedWindow(); err != nil {
+		fmt.Println(err)
+	}
 	return &app
+}
+
+func (r *NSRunningApplication) ShowElements() {
+	r.focusedWindow.ShowElements()
+}
+
+func (r *NSRunningApplication) Click(buttonName string) error {
+	button, err := r.focusedWindow.FindElementByName("AXButton", buttonName)
+	if err != nil {
+		return err
+	}
+	button.Click()
+	time.Sleep(defaultDelay)
+	return r.loadFocusedWindow()
 }
 
 func (r *NSRunningApplication) BundleIdentifier() string {
@@ -41,9 +67,10 @@ func (r *NSRunningApplication) createAX() {
 	r.axRef = core.Ref(C.CreateApplicationAXRef(r.ref))
 }
 
-func (r *NSRunningApplication) loadFocusedWindow() {
+func (r *NSRunningApplication) loadFocusedWindow() (err error) {
 	// Get the ax ui ref for the focused window
 	fwAXRef := C.GetAXFocusedWindow(C.CFTypeRef(r.axRef))
 	// Greate hierachy of elements
-	r.focusedWindow = axuielement.GetAXUIElementRef(core.Ref(fwAXRef))
+	r.focusedWindow, err = axuielement.GetAXUIElementRef(core.Ref(fwAXRef))
+	return
 }

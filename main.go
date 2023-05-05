@@ -16,6 +16,15 @@ import (
 // )
 
 func main() {
-	app := appkit.GetApp()
-	fmt.Println(app.BundleIdentifier())
+	pdApp := appkit.GetApp()
+	fmt.Println(pdApp.BundleIdentifier())
+	pdApp.ShowElements()
+	pdApp.Click("Install")
+	pdApp.ShowElements()
+	pdApp.Click("Yes")
+	// This will run a installer for podman so we need to pick it
+	// piApp := appkit.GetApp()
+	// fmt.Println(piApp.BundleIdentifier())
+	// piApp.ShowElements()
+	appkit.ShowAllApplications()
 }

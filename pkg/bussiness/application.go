@@ -1,9 +1,18 @@
 package bussiness
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/adrianriobo/gomacx/pkg/api/appkit"
+)
 
 type Application struct {
-	ExecPath string
+	ref *appkit.NSRunningApplication
+}
+
+func Get() *Application {
+	return &Application{
+		ref: appkit.GetApp()}
 }
 
 func (a *Application) Click(buttonName string) error {

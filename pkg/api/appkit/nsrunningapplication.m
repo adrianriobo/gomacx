@@ -6,9 +6,19 @@ void* FrontmostApplication(){
         }
 }
 
+void ShowAllApplications() {
+    @autoreleasepool {
+        NSWorkspace *workspace = [NSWorkspace sharedWorkspace];
+        NSArray *applications = [workspace runningApplications];
+
+        for (NSRunningApplication *app in applications) {
+            NSLog(@"%@", [app bundleIdentifier]);
+        }
+    }
+}
+
 const char* BundleIdentifier(void* nsRunningApplication) {
     NSRunningApplication* a = (NSRunningApplication*)nsRunningApplication;
-    pid_t pid = [a processIdentifier];
     return [[a bundleIdentifier] cStringUsingEncoding:NSISOLatin1StringEncoding];
 }
 

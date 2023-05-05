@@ -23,7 +23,6 @@ CFArrayRef GetAXUIElementChildren(CFTypeRef axuielement) {
         AXError err;
         CFArrayRef childrenPtr;
         err = AXUIElementCopyAttributeValue(axuielement, kAXChildrenAttribute, (CFTypeRef *) &childrenPtr);
-        // assert(kAXErrorSuccess == err);
         return childrenPtr;
     }
 }
@@ -44,7 +43,7 @@ const char* GetTitleAttribute(CFTypeRef axuielement) {
         err = AXUIElementCopyAttributeValue(axuielement, kAXTitleAttribute, (CFTypeRef *) &att);
         if (err != kAXErrorSuccess) 
             return "";
-        NSLog(@"AX Tittle is %@ \n", att);
+        // NSLog(@"AX Tittle is %@ \n", att);
         return strdup([att UTF8String]);
     }
 }
@@ -57,7 +56,7 @@ const char* GetRoleAttribute(CFTypeRef axuielement) {
         err = AXUIElementCopyAttributeValue(axuielement, kAXRoleAttribute, (CFTypeRef *) &att);
         if (err != kAXErrorSuccess) 
             return "";
-        NSLog(@"AX Role is %@ \n", att);
+        // NSLog(@"AX Role is %@ \n", att);
         return strdup([att UTF8String]);
     }
 }
@@ -70,11 +69,28 @@ const char* GetValueAttribute(CFTypeRef axuielement) {
         err = AXUIElementCopyAttributeValue(axuielement, kAXValueAttribute, (CFTypeRef *) &att);
         if (err != kAXErrorSuccess) 
             return "";
-        NSLog(@"AX Value is %@ \n", att);
+        // NSLog(@"AX Value is %@ \n", att);
         if (CFGetTypeID(att) == CFStringGetTypeID()) {
             return strdup([att UTF8String]);
         }
         return "";
+    }
+}
+
+void ClickButton(CFTypeRef axuielement) {
+    @autoreleasepool {
+        AXError err;
+        err = AXUIElementPerformAction((AXUIElementRef)axuielement, kAXPressAction);
+        if (err == kAXErrorActionUnsupported) 
+            NSLog(@"error kAXErrorActionUnsupported \n");
+        if (err == kAXErrorIllegalArgument) 
+            NSLog(@"error kAXErrorIllegalArgument \n");
+        if (err == kAXErrorInvalidUIElement) 
+            NSLog(@"error kAXErrorInvalidUIElement \n");
+        if (err == kAXErrorCannotComplete) 
+            NSLog(@"error kAXErrorCannotComplete \n");
+        if (err == kAXErrorNotImplemented) 
+            NSLog(@"error kAXErrorNotImplemented \n");
     }
 }
 

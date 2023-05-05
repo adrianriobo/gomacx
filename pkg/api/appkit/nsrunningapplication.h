@@ -3,6 +3,9 @@
 // https://developer.apple.com/documentation/appkit/nsworkspace/1532097-frontmostapplication?language=objc
 void* FrontmostApplication();
 
+// Show all 
+void ShowAllApplications();
+
 // https://developer.apple.com/documentation/appkit/nsrunningapplication/1529140-bundleidentifier?language=objc
 const char* BundleIdentifier(void* app);
 
