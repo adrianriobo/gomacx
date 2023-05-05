@@ -32,6 +32,20 @@ func ShowAllApplications() {
 	C.ShowAllApplications()
 }
 
+func GetAppByBundleAndWindow(bundleID, windowTitle string) *NSRunningApplication {
+	cBundleID := C.CString(bundleID)
+	defer C.free(unsafe.Pointer(cBundleID))
+	cWindowTitle := C.CString(windowTitle)
+	defer C.free(unsafe.Pointer(cWindowTitle))
+	app := NSRunningApplication{
+		ref: C.FindRunningApplication(cBundleID, cWindowTitle)}
+	app.createAX()
+	if err := app.loadFocusedWindow(); err != nil {
+		fmt.Println(err)
+	}
+	return &app
+}
+
 func GetApp() *NSRunningApplication {
 	app := NSRunningApplication{
 		ref: C.FrontmostApplication()}

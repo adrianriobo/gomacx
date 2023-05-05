@@ -3,6 +3,8 @@
 // https://developer.apple.com/documentation/appkit/nsworkspace/1532097-frontmostapplication?language=objc
 void* FrontmostApplication();
 
+void* FindRunningApplication(const char* bundleID, const char* windowTitle);
+
 // Show all 
 void ShowAllApplications();
 

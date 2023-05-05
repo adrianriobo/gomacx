@@ -26,5 +26,7 @@ func main() {
 	// piApp := appkit.GetApp()
 	// fmt.Println(piApp.BundleIdentifier())
 	// piApp.ShowElements()
-	appkit.ShowAllApplications()
+	// appkit.ShowAllApplications()
+	piApp := appkit.GetAppByBundleAndWindow("com.apple.installer", "Install Podman")
+	piApp.ShowElements()
 }
