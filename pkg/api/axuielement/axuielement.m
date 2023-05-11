@@ -3,9 +3,8 @@
 // https://www.electronjs.org/docs/latest/tutorial/accessibility#macos
 // CFStringRef kAXManualAccessibility = CFSTR("AXManualAccessibility");
 
-const char* HasAXUIElementChildren(CFTypeRef axuielement) {
+const char* HasChildren(CFTypeRef axuielement) {
     @autoreleasepool {
-        AXUIElementRef a = (AXUIElementRef)axuielement;
         AXError err;
         CFArrayRef childrenPtr;
         NSString *result = @"true";
@@ -17,9 +16,8 @@ const char* HasAXUIElementChildren(CFTypeRef axuielement) {
     }
 }
 
-CFArrayRef GetAXUIElementChildren(CFTypeRef axuielement) {
+CFArrayRef GetChildren(CFTypeRef axuielement) {
     @autoreleasepool {
-        AXUIElementRef a = (AXUIElementRef)axuielement;
         AXError err;
         CFArrayRef childrenPtr;
         err = AXUIElementCopyAttributeValue(axuielement, kAXChildrenAttribute, (CFTypeRef *) &childrenPtr);
@@ -34,42 +32,26 @@ CFTypeRef GetChild(CFArrayRef children, CFIndex index) {
     }
 }
 
-const char* GetTitleAttribute(CFTypeRef axuielement) {
+const char* GetTitle(CFTypeRef axuielement) {
     @autoreleasepool {
-        AXUIElementRef a = (AXUIElementRef)axuielement;
-        
         AXError err;
         NSString *att = nil;
         err = AXUIElementCopyAttributeValue(axuielement, kAXTitleAttribute, (CFTypeRef *) &att);
         if (err != kAXErrorSuccess) 
             return "";
-        // NSLog(@"AX Tittle is %@ \n", att);
         return strdup([att UTF8String]);
     }
 }
 
-const char* GetRoleAttribute(CFTypeRef axuielement) {
+const char* GetValue(CFTypeRef axuielement) {
     @autoreleasepool {
-        AXUIElementRef a = (AXUIElementRef)axuielement;
-        AXError err;
-        NSString *att = nil;
-        err = AXUIElementCopyAttributeValue(axuielement, kAXRoleAttribute, (CFTypeRef *) &att);
-        if (err != kAXErrorSuccess) 
-            return "";
-        // NSLog(@"AX Role is %@ \n", att);
-        return strdup([att UTF8String]);
-    }
-}
-
-const char* GetValueAttribute(CFTypeRef axuielement) {
-    @autoreleasepool {
-        AXUIElementRef a = (AXUIElementRef)axuielement;
         AXError err;
         NSString *att = nil;
         err = AXUIElementCopyAttributeValue(axuielement, kAXValueAttribute, (CFTypeRef *) &att);
         if (err != kAXErrorSuccess) 
             return "";
-        // NSLog(@"AX Value is %@ \n", att);
+        // Values holding by elements can be numeric, strings.... 
+        // initially we take care for strings then we will add for checkboxes...
         if (CFGetTypeID(att) == CFStringGetTypeID()) {
             return strdup([att UTF8String]);
         }
@@ -77,7 +59,46 @@ const char* GetValueAttribute(CFTypeRef axuielement) {
     }
 }
 
-void ClickButton(CFTypeRef axuielement) {
+const char* GetDescription(CFTypeRef axuielement) {
+    @autoreleasepool {
+        AXError err;
+        NSString *att = nil;
+        err = AXUIElementCopyAttributeValue(axuielement, kAXDescriptionAttribute, (CFTypeRef *) &att);
+        if (err != kAXErrorSuccess) 
+            return "";
+        return strdup([att UTF8String]);
+    }
+}
+
+const char* GetRole(CFTypeRef axuielement) {
+    @autoreleasepool {
+        AXError err;
+        NSString *att = nil;
+        err = AXUIElementCopyAttributeValue(axuielement, kAXRoleAttribute, (CFTypeRef *) &att);
+        if (err != kAXErrorSuccess) 
+            return "";
+        return strdup([att UTF8String]);
+    }
+}
+
+
+
+void ShowActions(CFTypeRef axuielement) {
+    @autoreleasepool {
+        // AXUIElementRef a = (AXUIElementRef)axuielement;
+        AXError err;
+        CFArrayRef actions = nil;
+        err = AXUIElementCopyActionNames(axuielement, &actions);
+        if (err == kAXErrorSuccess && actions != nil) {
+            NSArray *actionsArray = (__bridge NSArray *)(actions);
+            for (NSString *action in actionsArray) {
+                NSLog(@"%@", action);
+            }
+        }
+    }    
+}
+
+void Press(CFTypeRef axuielement) {
     @autoreleasepool {
         AXError err;
         err = AXUIElementPerformAction((AXUIElementRef)axuielement, kAXPressAction);

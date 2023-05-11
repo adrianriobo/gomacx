@@ -15,20 +15,19 @@ void* FindRunningApplication(const char *bundleID, const char *windowTitle) {
         NSWorkspace* workspace = [NSWorkspace sharedWorkspace];
         NSArray* runningApps = [workspace runningApplications];
         for (NSRunningApplication* app in runningApps) {
-            // pid_t pid = [app processIdentifier];
-            // AXUIElementRef appRef = AXUIElementCreateApplication(pid);
-            // AXError err;
-            // AXUIElementRef focusedWindow = nil;
-            // err = AXUIElementCopyAttributeValue(appRef, kAXFocusedWindowAttribute,
-            //                             (CFTypeRef *) &focusedWindow);
-            // NSString *att = nil;
-            // err = AXUIElementCopyAttributeValue(focusedWindow, kAXTitleAttribute, (CFTypeRef *) &att);
-            // NSString* windowTitleString = [[NSString alloc] initWithCharacters:CFStringGetCharactersPtr(att) length:CFStringGetLength(att)];
             NSLog(@"app bundle %@ \n", [app bundleIdentifier]);
-            if ([[app bundleIdentifier] isEqualToString:nBundleID]) {
-                NSLog(@"found\n");
-                // [windowTitleString containsString:title]
-                return app;
+            pid_t pid = [app processIdentifier];
+            AXUIElementRef appRef = AXUIElementCreateApplication(pid);
+            AXError err;
+            AXUIElementRef focusedWindow = nil;
+            err = AXUIElementCopyAttributeValue(appRef, kAXFocusedWindowAttribute,
+                                        (CFTypeRef *) &focusedWindow);
+            if (err == kAXErrorSuccess) {
+                NSString *wt = nil;
+                err = AXUIElementCopyAttributeValue(focusedWindow, kAXTitleAttribute, (CFTypeRef *) &wt);
+                if ([[app bundleIdentifier] isEqualToString:nBundleID] && [wt containsString:nWindowTitle]) {
+                    return app;
+                }
             }
         }
         return nil;
@@ -67,6 +66,12 @@ CFTypeRef CreateApplicationAXRef(void* appAXRef) {
         AXUIElementRef appRef = AXUIElementCreateApplication(pid);
         if (appRef == nil)
             NSLog(@"Error getting the ref app \n");
+
+        [a activateWithOptions: NSApplicationActivateAllWindows];
+        NSWindow *focusedWindow2 = [NSApp keyWindow];
+    
+        NSLog(@"Get NSApplicationActivateAllWindows for app %@\n", focusedWindow2);
+        
         return appRef;
     }
 }
