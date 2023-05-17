@@ -59,6 +59,15 @@ const char* GetValue(CFTypeRef axuielement) {
     }
 }
 
+void SetValue(CFTypeRef axuielement, const char* value) {
+    @autoreleasepool {
+        AXError err;
+        NSString *nValue = [NSString stringWithUTF8String:value];
+        err = AXUIElementSetAttributeValue(axuielement, kAXValueAttribute, CFBridgingRetain(nValue));
+        assert(kAXErrorSuccess == err);
+    }
+}
+
 const char* GetDescription(CFTypeRef axuielement) {
     @autoreleasepool {
         AXError err;

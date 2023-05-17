@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"unsafe"
 
 	"github.com/adrianriobo/gomacx/pkg/core"
 )
@@ -32,6 +33,14 @@ func (e *AXUIElementRef) GetRef() core.Ref {
 	return e.ref
 }
 
+func (e *AXUIElementRef) Role() string {
+	return e.role
+}
+
+func (e *AXUIElementRef) Children() []*AXUIElementRef {
+	return e.children
+}
+
 func GetAXUIElementRef(ref core.Ref, parent *AXUIElementRef) (*AXUIElementRef, error) {
 	r := AXUIElementRef{}
 	r.ref = ref
@@ -39,34 +48,44 @@ func GetAXUIElementRef(ref core.Ref, parent *AXUIElementRef) (*AXUIElementRef, e
 	if hasChildren {
 		r.children = getChildren(ref, &r)
 	}
-	id, err := getID(ref)
-	if err != nil && len(r.children) == 0 {
-		return nil, fmt.Errorf("elto has no id and no children")
-	}
+	id, _ := getID(ref)
 	r.id = id
 	r.role = getRole(ref)
 	if parent != nil {
 		r.Parent = parent
 	}
-	// showActions(ref)
 	return &r, nil
 }
 
-func (e *AXUIElementRef) FindElementByName(role, id string) (*AXUIElementRef, error) {
-	if e.role == role && e.id == id {
+func (e *AXUIElementRef) FindElementByRoleAndID(role, id string) (*AXUIElementRef, error) {
+	// fmt.Println("element on headers", e.Role(), e.GetID(), len(e.Children()))
+	if e.role == role && strings.Contains(e.id, id) {
 		return e, nil
 	}
 	for _, child := range e.children {
-		if element, err := child.FindElementByName(role, id); err == nil {
+		if element, err := child.FindElementByRoleAndID(role, id); err == nil {
 			return element, nil
 		}
 	}
 	return nil, fmt.Errorf("element not found")
 }
 
+func (e *AXUIElementRef) FindElementsByRoleAndID(role, id string) ([]*AXUIElementRef, error) {
+	var elements []*AXUIElementRef
+	// fmt.Println("element", e.Role(), e.GetID(), len(e.Children()))
+	if e.role == role && strings.Contains(e.id, id) {
+		elements = append(elements, e)
+	}
+	for _, child := range e.children {
+		if childElements, err := child.FindElementsByRoleAndID(role, id); err == nil {
+			elements = append(elements, childElements...)
+		}
+	}
+	return elements, nil
+}
+
 func (e *AXUIElementRef) FindElementByID(id string) (*AXUIElementRef, error) {
-	fmt.Println("id", e.id)
-	if len(e.id) > 0 && e.id == id {
+	if len(e.id) > 0 && strings.Contains(e.id, id) {
 		return e, nil
 	}
 	for _, child := range e.children {
@@ -75,6 +94,24 @@ func (e *AXUIElementRef) FindElementByID(id string) (*AXUIElementRef, error) {
 		}
 	}
 	return nil, fmt.Errorf("element not found")
+}
+
+func (e *AXUIElementRef) FindElementByRole(role string) (*AXUIElementRef, error) {
+	if e.role == role {
+		return e, nil
+	}
+	for _, child := range e.children {
+		if element, err := child.FindElementByRole(role); err == nil {
+			return element, nil
+		}
+	}
+	return nil, fmt.Errorf("element not found")
+}
+
+func (e *AXUIElementRef) SetValue(value string) {
+	cValue := C.CString(value)
+	defer C.free(unsafe.Pointer(cValue))
+	C.SetValue(C.CFTypeRef(e.ref), cValue)
 }
 
 func (e *AXUIElementRef) ShowElements() {

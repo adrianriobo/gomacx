@@ -9,6 +9,7 @@ package appkit
 import "C"
 import (
 	"fmt"
+	"os/exec"
 	"time"
 	"unsafe"
 
@@ -17,8 +18,10 @@ import (
 )
 
 var (
-	defaultDelay      = 3 * time.Second
+	defaultDelay      = 5 * time.Second
+	longDelay         = 15 * time.Second
 	clickableElements = []string{"AXButton", "AXStaticText", "AXLink"}
+	checkableElements = []string{"AXCheckBox"}
 )
 
 // https://developer.apple.com/documentation/appkit/nsrunningapplication?language=objc
@@ -46,37 +49,76 @@ func GetAppByBundleAndWindow(bundleID, windowTitle string) (*NSRunningApplicatio
 	app := NSRunningApplication{
 		ref: appRef}
 	app.createAX()
-	if err := app.loadFocusedWindow(); err != nil {
+	if err := app.LoadFocusedWindow(); err != nil {
 		fmt.Println(err)
 	}
 	return &app, nil
 }
 
-func GetApp() *NSRunningApplication {
+func GetApp(applicationPath string) (*NSRunningApplication, error) {
+	if err := openApplication(applicationPath); err != nil {
+		return nil, fmt.Errorf("error getting app %s", applicationPath, err)
+	}
+	time.Sleep(defaultDelay)
+	// Get the fromtmost application
 	app := NSRunningApplication{
 		ref: C.FrontmostApplication()}
+	// create an ax element to access the app
 	app.createAX()
-	if err := app.loadFocusedWindow(); err != nil {
-		fmt.Println(err)
+	time.Sleep(defaultDelay)
+	// Load all AX elements for the app
+	if err := app.LoadFocusedWindow(); err != nil {
+		return nil, fmt.Errorf("error getting app %s", applicationPath, err)
 	}
-	return &app
+	return &app, nil
+}
+
+func GetFrontmostApp() (*NSRunningApplication, error) {
+	// Get the fromtmost application
+	app := NSRunningApplication{
+		ref: C.FrontmostApplication()}
+	// create an ax element to access the app
+	app.createAX()
+	time.Sleep(defaultDelay)
+	// Load all AX elements for the app
+	if err := app.LoadFocusedWindow(); err != nil {
+		return nil, fmt.Errorf("error getting frontmost app", err)
+	}
+	return &app, nil
+}
+
+func openApplication(path string) error {
+	cmd := exec.Command("open", path)
+	return cmd.Start()
 }
 
 func (r *NSRunningApplication) ShowElements() {
-	r.loadFocusedWindow()
+	r.LoadFocusedWindow()
 	r.focusedWindow.ShowElements()
 }
 
 // TODO something similar for role Checkbox
 // ...Element AXCheckBox id Help improve Podman Desktop
 func (r *NSRunningApplication) Click(id string) error {
-	clickable, err := r.getClickable(id)
+	clickable, err := r.getElementbyRoleAndID(id, clickableElements)
 	if err != nil {
 		return err
 	}
-	clickable.Press()
-	time.Sleep(defaultDelay)
-	return r.loadFocusedWindow()
+	return r.pressElement(clickable)
+}
+
+func (r *NSRunningApplication) Check(id string) error {
+	clickable, err := r.getElementbyRoleAndID(id, checkableElements)
+	if err != nil {
+		return err
+	}
+	return r.pressElement(clickable)
+}
+
+func (r *NSRunningApplication) pressElement(element *axuielement.AXUIElementRef) error {
+	element.Press()
+	time.Sleep(longDelay)
+	return r.LoadFocusedWindow()
 }
 
 func (r *NSRunningApplication) BundleIdentifier() string {
@@ -90,7 +132,7 @@ func (r *NSRunningApplication) createAX() {
 	r.axRef = core.Ref(C.CreateApplicationAXRef(r.ref))
 }
 
-func (r *NSRunningApplication) loadFocusedWindow() (err error) {
+func (r *NSRunningApplication) LoadFocusedWindow() (err error) {
 	// Get the ax ui ref for the focused window
 	fwAXRef := C.GetAXFocusedWindow(C.CFTypeRef(r.axRef))
 	// Greate hierachy of elements
@@ -98,9 +140,9 @@ func (r *NSRunningApplication) loadFocusedWindow() (err error) {
 	return
 }
 
-func (r *NSRunningApplication) getClickable(id string) (*axuielement.AXUIElementRef, error) {
-	for _, ct := range clickableElements {
-		clickable, err := r.focusedWindow.FindElementByName(ct, id)
+func (r *NSRunningApplication) getElementbyRoleAndID(id string, elementTypes []string) (*axuielement.AXUIElementRef, error) {
+	for _, ct := range elementTypes {
+		clickable, err := r.focusedWindow.FindElementByRoleAndID(ct, id)
 		if err == nil {
 			return clickable, nil
 		}
@@ -108,37 +150,73 @@ func (r *NSRunningApplication) getClickable(id string) (*axuielement.AXUIElement
 	return nil, fmt.Errorf("not found any clickable element with id %s", id)
 }
 
-func (r *NSRunningApplication) SetCheck(id, current, desired string) error {
-	element, err := r.focusedWindow.FindElementByID(id)
+// check is a label (AXStaticText) and checkbox (AXCheckBox)
+func (r *NSRunningApplication) SetCheck(current, desired string) error {
+	check, err := r.focusedWindow.FindElementByRole("AXCheckBox")
 	if err != nil {
-		return fmt.Errorf("Can not find %s among the AX managed objects", id)
+		return fmt.Errorf("Can not find any AXCheckBox element")
 	}
-	fmt.Println("got the holder", element.Parent.GetRef())
-	check, err := element.Parent.FindElementByID(current)
+	_, err = check.Parent.FindElementByID(current)
 	if err != nil {
-		return fmt.Errorf("Can not find element with value %s within %s ", current, id)
+		return fmt.Errorf("Can not find element with value %s ", current)
 	}
 	check.Press()
-	// Check after press we get the expected value
-	// delay for refresh
 	time.Sleep(defaultDelay)
-	_, err = element.Parent.FindElementByID(desired)
+	err = r.LoadFocusedWindow()
 	if err != nil {
-		return fmt.Errorf("Set on %s has not set the expected %s state", id, desired)
+		return fmt.Errorf("error re loading the focused window", err)
+	}
+	check, err = r.focusedWindow.FindElementByRole("AXCheckBox")
+	if err != nil {
+		return fmt.Errorf("Can not find any AXCheckBox element")
+	}
+	_, err = check.Parent.FindElementByID(desired)
+	if err != nil {
+		return fmt.Errorf("Error checking the desired state %s ", desired, err)
 	}
 	return nil
 }
 
-// func (r *NSRunningApplication) GetGroupHolding(id string) (*axuielement.AXUIElementRef, error) {
-// 	return r.focusedWindow.GetGroupHolding(id)
-// }
+func (r *NSRunningApplication) InstallExtension(oci string) error {
+	button, err := r.focusedWindow.FindElementByRoleAndID("AXButton", "Install extension from the OCI image")
+	if err != nil {
+		return fmt.Errorf("Can not find button for install new extension from OCI")
+	}
+	// fmt.Println("el button es ", button.GetID(), button.Role())
+	// fmt.Println("y el parent", button.Parent.GetID(), button.Parent.Role(), button.Parent.GetRef(), len(button.Parent.Children()))
+	// button.Parent.ShowElements()
+	textField, err := button.Parent.FindElementByRole("AXTextField")
+	if err != nil {
+		return fmt.Errorf("Can not find text field for install new extension from OCI")
+	}
+	textField.SetValue(oci)
+	time.Sleep(defaultDelay)
+	button.Press()
+	time.Sleep(longDelay)
+	return r.LoadFocusedWindow()
+}
 
-// func (r *NSRunningApplication) EnableDisable(elementName string) error {
-// 	_, err := r.focusedWindow.GetEnableDisableElement(elementName)
-// 	if err != nil {
-// 		fmt.Println("not found disabled enabled")
-// 		return err
-// 	}
-// 	fmt.Println("found disabled enabled")
-// 	return nil
-// }
+// This function is used to click on install button offered after installing the
+// openshift local extension on systems without any previous openshift local installation
+func (r *NSRunningApplication) InstallOpenshiftLocal() error {
+	extensionHeaders, err := r.focusedWindow.FindElementsByRoleAndID("AXStaticText", "OpenShift Local")
+	// fmt.Println("number of extension headers", len(extensionHeaders))
+	if err != nil {
+		return fmt.Errorf("Can not find section for install for Openshift Local")
+	}
+	var installButton *axuielement.AXUIElementRef
+	for _, extensionHeader := range extensionHeaders {
+		// fmt.Println("header role", extensionHeader.Role(), len(extensionHeader.Children()))
+		// installButton, err = extensionHeader.Parent.Parent.FindElementByRoleAndID("AXButton", "Install")
+		// if err == nil {
+		// 	break
+		// }
+		extensionHeader.Parent.Parent.ShowElements()
+	}
+	if installButton == nil {
+		return fmt.Errorf("Can not find button for installing the Openshift Local extension")
+	}
+	installButton.Press()
+	time.Sleep(defaultDelay)
+	return r.LoadFocusedWindow()
+}

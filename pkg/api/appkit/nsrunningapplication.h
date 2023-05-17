@@ -1,5 +1,5 @@
-#include <Cocoa/Cocoa.h>
-#include <AppKit/AppKit.h>
+#import <Cocoa/Cocoa.h>
+#import <AppKit/AppKit.h>
 
 // https://developer.apple.com/documentation/appkit/nsworkspace/1532097-frontmostapplication?language=objc
 void* FrontmostApplication();

@@ -17,6 +17,9 @@ const char* GetTitle(CFTypeRef axuielement);
 // Get value attribute
 const char* GetValue(CFTypeRef axuielement);
 
+// Set value attribute
+void SetValue(CFTypeRef axuielement, const char* value);
+
 // Get description attribute
 const char* GetDescription(CFTypeRef axuielement);
 
